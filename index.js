@@ -8,7 +8,7 @@ const client = new Client({
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildVoiceStates,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.GuildMembers // good for later features
+        GatewayIntentBits.GuildMembers
     ]
 });
 
@@ -20,41 +20,31 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
     try {
         const targetVoiceId = config.VOICE_CHANNEL_ID;
         const alertChannelId = config.TEXT_CHANNEL_ID;
-        const helpingRoleId = config.ROLE_ID; // role to ping + skip if user has it
+        const helpingRoleId = config.ROLE_ID;
 
-        // Ignore bots
         if (newState.member?.user?.bot) return;
 
-        // Did user just JOIN the target VC?
         const joinedTarget =
             newState.channelId === targetVoiceId &&
             oldState.channelId !== targetVoiceId;
 
         if (!joinedTarget) return;
 
-        // 🔹 If user ALREADY has the helping role, do nothing
-        if (newState.member.roles.cache.has(helpingRoleId)) {
-            console.log(`⏩ ${newState.member.user.tag} has helping role, skipping alert.`);
-            return;
-        }
+        // If user already has helping role, skip
+        if (newState.member.roles.cache.has(helpingRoleId)) return;
 
-        const guild = newState.guild;
-        const textChannel = guild.channels.cache.get(alertChannelId);
-
-        if (!textChannel) {
-            console.log('⚠️ Alert text channel not found.');
-            return;
-        }
+        const textChannel = newState.guild.channels.cache.get(alertChannelId);
+        if (!textChannel) return;
 
         const roleMention = `<@&${helpingRoleId}>`;
         const userMention = `<@${newState.id}>`;
-        const vcName = newState.channel?.name || 'the voice channel';
+        const vcName = newState.channel?.name || 'voice channel';
 
+        // ✅ Your requested format
         await textChannel.send({
-            content: `${roleMention} ${userMention} just joined **${vcName}** 🎧`
+            content: `${roleMention} **|** ${userMention} is now in **${vcName}** — need help? Join in!`
         });
 
-        console.log(`📢 Mentioned ${helpingRoleId} because ${newState.member.user.tag} joined ${vcName}`);
     } catch (err) {
         console.error('Error in voiceStateUpdate handler:', err);
     }
